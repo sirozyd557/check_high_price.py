@@ -24,7 +24,7 @@ def send_telegram(message):
     print(f"Telegram Response Text: {res.text}")
 
 def get_target_ym_list():
-    # 최근 3개월 치의 연월(YYYYMM) 리스트 생성
+    # 최근 3개월 치의 연월(YYYYMM) 리스트 생성 (과거 데이터 비교군 확보)
     ym_list = []
     now = datetime.now()
     for i in range(3):
@@ -35,7 +35,7 @@ def get_target_ym_list():
     return ym_list
 
 def main():
-    print("과거 누적 및 최신 실거래가 데이터 수집 시작...")
+    print("과거 누적 및 실거래가 데이터 수집 시작...")
     ym_list = get_target_ym_list()
     
     all_dfs = []
@@ -74,13 +74,16 @@ def main():
     # 날짜 순서대로 정렬 (오래된 순 -> 최신 순)
     df = df.sort_values(by=['y', 'm', 'd'], ascending=True).reset_index(drop=True)
     
-    # 오늘 실제 날짜 기준 (2026년 10월 28일 기준)
-    now = datetime.now()
-    target_y = now.year
-    target_m = now.month
-    target_d = now.day
+    # 💡 핵심 수정: 데이터 안에서 실제로 신고·기록된 '가장 최신 계약일'을 자동으로 추출
+    df['deal_date_str'] = df['y'].astype(str) + '-' + df['m'].astype(str).str.zfill(2) + '-' + df['d'].astype(str).str.zfill(2)
+    latest_date_str = df['deal_date_str'].max()
     
-    print(f"분석 기준 오늘 날짜: {target_y}-{target_m:02d}-{target_d:02d}")
+    latest_dt = datetime.strptime(latest_date_str, "%Y-%m-%d")
+    target_y = latest_dt.year
+    target_m = latest_dt.month
+    target_d = latest_dt.day
+    
+    print(f"데이터베이스 기준 가장 최근 거래일: {target_y}-{target_m:02d}-{target_d:02d}")
     
     high_price_messages = []
     
@@ -106,18 +109,18 @@ def main():
         else:
             is_high = True
             
-        # 정확히 오늘 날짜에 체결된 거래이면서 신고가인 것만 필터링
-        is_today = (row['y'] == target_y) and (row['m'] == target_m) and (row['d'] == target_d)
+        # 데이터상 가장 최신 거래일에 체결된 거래이면서 신고가인 것만 필터링
+        is_latest_target = (row['y'] == target_y) and (row['m'] == target_m) and (row['d'] == target_d)
         
-        if is_today and is_high:
+        if is_latest_target and is_high:
             msg_item = f"🔥 **[신고가 경신!]**\n📍 [{dong}] {apt} ({area}㎡)\n  📅 {deal_date} | 💰 {price}만원 | 층: {floor}층\n"
             high_price_messages.append(msg_item)
 
     if high_price_messages:
-        final_msg = f"🔔 [창원시 오늘({target_y}-{target_m:02d}-{target_d:02d}) 신고가 알림]\n\n" + "\n".join(high_price_messages)
+        final_msg = f"🔔 [창원시 최신 거래일({target_y}-{target_m:02d}-{target_d:02d}) 신고가 알림]\n\n" + "\n".join(high_price_messages)
         send_telegram(final_msg)
     else:
-        send_telegram(f"🔔 [창원시 부동산 봇]\n오늘({target_y}-{target_m:02d}-{target_d:02d}) 자로 새로 등록·경신된 신고가 매물이 없습니다.")
+        send_telegram(f"🔔 [창원시 부동산 봇]\n최신 거래일({target_y}-{target_m:02d}-{target_d:02d})에 새로 등록·경신된 신고가 매물이 없습니다.")
 
 if __name__ == "__main__":
     main()
