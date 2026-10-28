@@ -19,9 +19,12 @@ CHANGWON_LAWD_CD = {
 def send_telegram(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {"chat_id": CHAT_ID, "text": message, "parse_mode": "Markdown"}
-    requests.post(url, json=payload)
+    res = requests.post(url, json=payload)
+    print(f"Telegram Response Code: {res.status_code}")
+    print(f"Telegram Response Text: {res.text}")
 
 def main():
+    print("실거래가 데이터 수집 시작...")
     now = datetime.now()
     ym = f"{now.year}{now.month:02d}"
     
@@ -31,6 +34,7 @@ def main():
         params = {"serviceKey": PUBLIC_API_KEY, "LAWD_CD": lawd_cd, "DEAL_YMD": ym, "numOfRows": "1000"}
         try:
             res = requests.get(base_url, params=params, timeout=10)
+            print(f"{district} API Status: {res.status_code}")
             if res.status_code == 200:
                 root = ET.fromstring(res.content)
                 items = root.findall(".//{*}item")
@@ -44,30 +48,22 @@ def main():
             print(f"Error {district}: {e}")
             
     if not all_dfs:
-        print("데이터 없음")
+        print("수집된 데이터가 없습니다.")
+        send_telegram("🔔 [창원시 부동산 봇] 수집된 실거래 데이터가 없습니다.")
         return
         
     df = pd.concat(all_dfs, ignore_index=True)
-    
-    # 데이터 전처리 (금액 쉼표 제거 및 숫자 변환)
     df['dealAmount_num'] = df['dealAmount'].str.replace(',', '').astype(float)
     df['y'] = pd.to_numeric(df['dealYear'], errors='coerce')
     df['m'] = pd.to_numeric(df['dealMonth'], errors='coerce')
     df['d'] = pd.to_numeric(df['dealDay'], errors='coerce')
     df['area'] = pd.to_numeric(df['excluUseAr'], errors='coerce').round(1)
     
-    # 아파트 이름 + 동 + 평형(전용면적)을 기준으로 기존 최고가 계산
-    # (단, 오늘 체결된 최신 거래와 이전에 체결되었던 과거 최고가를 비교하기 위함)
-    today_str = f"{now.year}-{now.month:02d}-{now.day:02d}"
-    
-    # 최신 계약일 순 정렬
     df = df.sort_values(by=['y', 'm', 'd'], ascending=False).reset_index(drop=True)
     
-    # 오늘 날짜와 일치하거나, 최근 등록된 거래들을 대상으로 체크 (여기서는 최근 데이터 중 최고가 경신 여부 확인)
     msg = f"🔔 [창원시 아파트 실거래가 및 신고가 알림]\n\n"
     
-    count = 0
-    for _, row in df.head(10).iterrows():
+    for _, row in df.head(5).iterrows():
         apt = row.get("aptNm", "정보없음")
         price = row.get("dealAmount", "0").strip()
         price_num = row.get("dealAmount_num", 0)
@@ -76,7 +72,6 @@ def main():
         dong = row.get("umdNm", "")
         deal_date = f"{row.get('dealYear','')}-{str(row.get('dealMonth','')).zfill(2)}-{str(row.get('dealDay','')).zfill(2)}"
         
-        # 같은 단지, 같은 면적의 이전 거래 내역 중 이번 거래일보다 과거인 데이터 필터링
         past_df = df[
             (df['aptNm'] == apt) & 
             (df['area'] == area) & 
@@ -89,12 +84,12 @@ def main():
             if price_num > max_past_price:
                 is_high = True
         else:
-            # 과거 데이터가 아예 없으면 첫 거래이므로 신고가로 간주할 수 있음
             is_high = True
             
         badge = "🔥 **[신고가 경신!]**" if is_high else "📌 [일반 거래]"
-        
         msg += f"{badge}\n📍 [{dong}] {apt} ({area}㎡)\n  📅 {deal_date} | 💰 {price}만원 | 층: {floor}층\n\n"
-        count += 1
 
     send_telegram(msg)
+
+if __name__ == "__main__":
+    main()
