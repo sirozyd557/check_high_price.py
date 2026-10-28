@@ -1,1 +1,30 @@
+name: Daily Apt Price Alert
 
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  run-alert:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install requests pandas
+
+      - name: Run script
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PUBLIC_API_KEY: ${{ secrets.PUBLIC_API_KEY }}
+        run: |
+          python check_high_price.py
