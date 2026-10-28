@@ -28,7 +28,7 @@ def main():
     all_dfs = []
     for district, lawd_cd in CHANGWON_LAWD_CD.items():
         base_url = "https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade"
-        params = {"serviceKey": PUBLIC_API_KEY, "LAWD_CD": lawd_cd, "DEAL_YMD": ym, "numOfRows": "500"}
+        params = {"serviceKey": PUBLIC_API_KEY, "LAWD_CD": lawd_cd, "DEAL_YMD": ym, "numOfRows": "1000"}
         try:
             res = requests.get(base_url, params=params, timeout=10)
             if res.status_code == 200:
@@ -47,24 +47,54 @@ def main():
         print("데이터 없음")
         return
         
-    master_df = pd.concat(all_dfs, ignore_index=True)
-    master_df['y'] = pd.to_numeric(master_df['dealYear'], errors='coerce')
-    master_df['m'] = pd.to_numeric(master_df['dealMonth'], errors='coerce')
-    master_df['d'] = pd.to_numeric(master_df['dealDay'], errors='coerce')
+    df = pd.concat(all_dfs, ignore_index=True)
     
-    master_df = master_df.sort_values(by=['y', 'm', 'd'], ascending=False).reset_index(drop=True)
+    # 데이터 전처리 (금액 쉼표 제거 및 숫자 변환)
+    df['dealAmount_num'] = df['dealAmount'].str.replace(',', '').astype(float)
+    df['y'] = pd.to_numeric(df['dealYear'], errors='coerce')
+    df['m'] = pd.to_numeric(df['dealMonth'], errors='coerce')
+    df['d'] = pd.to_numeric(df['dealDay'], errors='coerce')
+    df['area'] = pd.to_numeric(df['excluUseAr'], errors='coerce').round(1)
     
-    msg = f"🔔 [창원시 이달의 실거래 최신 5건 알림]\n\n"
-    for _, row in master_df.head(5).iterrows():
+    # 아파트 이름 + 동 + 평형(전용면적)을 기준으로 기존 최고가 계산
+    # (단, 오늘 체결된 최신 거래와 이전에 체결되었던 과거 최고가를 비교하기 위함)
+    today_str = f"{now.year}-{now.month:02d}-{now.day:02d}"
+    
+    # 최신 계약일 순 정렬
+    df = df.sort_values(by=['y', 'm', 'd'], ascending=False).reset_index(drop=True)
+    
+    # 오늘 날짜와 일치하거나, 최근 등록된 거래들을 대상으로 체크 (여기서는 최근 데이터 중 최고가 경신 여부 확인)
+    msg = f"🔔 [창원시 아파트 실거래가 및 신고가 알림]\n\n"
+    
+    count = 0
+    for _, row in df.head(10).iterrows():
         apt = row.get("aptNm", "정보없음")
         price = row.get("dealAmount", "0").strip()
-        area = row.get("excluUseAr", "")
+        price_num = row.get("dealAmount_num", 0)
+        area = row.get("area", "")
         floor = row.get("floor", "")
         dong = row.get("umdNm", "")
         deal_date = f"{row.get('dealYear','')}-{str(row.get('dealMonth','')).zfill(2)}-{str(row.get('dealDay','')).zfill(2)}"
-        msg += f"📍 [{dong}] {apt} ({area}㎡)\n  📅 {deal_date} | 💰 {price}만원 | 층: {floor}층\n\n"
         
-    send_telegram(msg)
+        # 같은 단지, 같은 면적의 이전 거래 내역 중 이번 거래일보다 과거인 데이터 필터링
+        past_df = df[
+            (df['aptNm'] == apt) & 
+            (df['area'] == area) & 
+            ((df['y'] < row['y']) | ((df['y'] == row['y']) & (df['m'] < row['m'])) | ((df['y'] == row['y']) & (df['m'] == row['m']) & (df['d'] < row['d'])))
+        ]
+        
+        is_high = False
+        if not past_df.empty:
+            max_past_price = past_df['dealAmount_num'].max()
+            if price_num > max_past_price:
+                is_high = True
+        else:
+            # 과거 데이터가 아예 없으면 첫 거래이므로 신고가로 간주할 수 있음
+            is_high = True
+            
+        badge = "🔥 **[신고가 경신!]**" if is_high else "📌 [일반 거래]"
+        
+        msg += f"{badge}\n📍 [{dong}] {apt} ({area}㎡)\n  📅 {deal_date} | 💰 {price}만원 | 층: {floor}층\n\n"
+        count += 1
 
-if __name__ == "__main__":
-    main()
+    send_telegram(msg)
