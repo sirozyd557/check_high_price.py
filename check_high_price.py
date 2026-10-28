@@ -24,7 +24,7 @@ def send_telegram(message):
     print(f"Telegram Response Text: {res.text}")
 
 def get_target_ym_list():
-    # 최근 3개월 치의 연월(YYYYMM) 리스트 생성 (과거 데이터 비교군 확보)
+    # 최근 3개월 치 데이터 수집 (비교군 확보)
     ym_list = []
     now = datetime.now()
     for i in range(3):
@@ -35,7 +35,7 @@ def get_target_ym_list():
     return ym_list
 
 def main():
-    print("과거 누적 및 실거래가 데이터 수집 시작...")
+    print("실거래가 데이터 수집 및 분석 시작...")
     ym_list = get_target_ym_list()
     
     all_dfs = []
@@ -71,23 +71,12 @@ def main():
     df['d'] = pd.to_numeric(df['dealDay'], errors='coerce')
     df['area'] = pd.to_numeric(df['excluUseAr'], errors='coerce').round(1)
     
-    # 날짜 순서대로 정렬 (오래된 순 -> 최신 순)
+    # 1. 과거부터 최신 순으로 정렬
     df = df.sort_values(by=['y', 'm', 'd'], ascending=True).reset_index(drop=True)
-    
-    # 💡 핵심 수정: 데이터 안에서 실제로 신고·기록된 '가장 최신 계약일'을 자동으로 추출
-    df['deal_date_str'] = df['y'].astype(str) + '-' + df['m'].astype(str).str.zfill(2) + '-' + df['d'].astype(str).str.zfill(2)
-    latest_date_str = df['deal_date_str'].max()
-    
-    latest_dt = datetime.strptime(latest_date_str, "%Y-%m-%d")
-    target_y = latest_dt.year
-    target_m = latest_dt.month
-    target_d = latest_dt.day
-    
-    print(f"데이터베이스 기준 가장 최근 거래일: {target_y}-{target_m:02d}-{target_d:02d}")
     
     high_price_messages = []
     
-    # 전체 데이터를 순회하며 신고가 여부 판별
+    # 전체 데이터를 순회하며 신고가 판별
     for idx, row in df.iterrows():
         apt = row.get("aptNm", "정보없음")
         price = row.get("dealAmount", "0").strip()
@@ -97,7 +86,7 @@ def main():
         dong = row.get("umdNm", "")
         deal_date = f"{row.get('dealYear','')}-{str(row.get('dealMonth','')).zfill(2)}-{str(row.get('dealDay','')).zfill(2)}"
         
-        # 현재 행보다 이전 시점의 동일 단지, 동일 평형 데이터 추출
+        # 이전 기록 비교
         past_df = df.iloc[:idx]
         past_same = past_df[(past_df['aptNm'] == apt) & (past_df['area'] == area)]
         
@@ -109,18 +98,54 @@ def main():
         else:
             is_high = True
             
-        # 데이터상 가장 최신 거래일에 체결된 거래이면서 신고가인 것만 필터링
-        is_latest_target = (row['y'] == target_y) and (row['m'] == target_m) and (row['d'] == target_d)
+        # 데이터에 기록된 전체 거래 중 '가장 최근에 거래된 상위 30개 물량'에 포함되는지 확인
+        # (이 부분을 통해 단 하루가 아니라 최근의 넉넉한 거래 묶음을 대상으로 검사합니다)
+        df['temp_idx'] = df.index
+        # 최신 순 정렬된 상태에서의 역순 인덱스 활용을 위해 아래에서 처리
         
-        if is_latest_target and is_high:
+    # 2. 최신 거래된 순서(내림차순)로 뒤집어서 최근 30개 거래만 타겟으로 추출
+    df_desc = df.sort_values(by=['y', 'm', 'd'], ascending=False).reset_index(drop=True)
+    recent_target_df = df_desc.head(30) # 최근 거래 30건 대상
+    
+    for _, row in recent_target_df.iterrows():
+        apt = row.get("aptNm", "정보없음")
+        price = row.get("dealAmount", "0").strip()
+        price_num = row.get("dealAmount_num", 0)
+        area = row.get("area", "")
+        floor = row.get("floor", "")
+        dong = row.get("umdNm", "")
+        deal_date = f"{row.get('dealYear','')}-{str(row.get('dealMonth','')).zfill(2)}-{str(row.get('dealDay','')).zfill(2)}"
+        
+        # 이 행보다 진짜 과거인 데이터들과 비교
+        original_idx = row.name # df_desc에서의 인덱스이므로 원본 df 기준 과거 비교를 위해 다시 필터링
+        # 원본 df에서 해당 행의 위치 찾기
+        match_rows = df[(df['aptNm'] == apt) & (df['area'] == area) & (df['y'] == row['y']) & (df['m'] == row['m']) & (df['d'] == row['d']) & (df['dealAmount'] == row['dealAmount'])]
+        if match_rows.empty:
+            continue
+        row_orig_idx = match_rows.index[0]
+        
+        past_df = df.iloc[:row_orig_idx]
+        past_same = past_df[(past_df['aptNm'] == apt) & (past_df['area'] == area)]
+        
+        is_high = False
+        if not past_same.empty:
+            max_past_price = past_same['dealAmount_num'].max()
+            if price_num > max_past_price:
+                is_high = True
+        else:
+            is_high = True
+            
+        if is_high:
             msg_item = f"🔥 **[신고가 경신!]**\n📍 [{dong}] {apt} ({area}㎡)\n  📅 {deal_date} | 💰 {price}만원 | 층: {floor}층\n"
-            high_price_messages.append(msg_item)
+            if msg_item not in high_price_messages:
+                high_price_messages.append(msg_item)
 
     if high_price_messages:
-        final_msg = f"🔔 [창원시 최신 거래일({target_y}-{target_m:02d}-{target_d:02d}) 신고가 알림]\n\n" + "\n".join(high_price_messages)
+        # 너무 많으면 정신없으므로 최근 신고가 상위 10개만 추려서 알림
+        final_msg = f"🔔 [창원시 최근 실거래 신고가 알림 (최신 30건 중)]\n\n" + "".join(high_price_messages[:10])
         send_telegram(final_msg)
     else:
-        send_telegram(f"🔔 [창원시 부동산 봇]\n최신 거래일({target_y}-{target_m:02d}-{target_d:02d})에 새로 등록·경신된 신고가 매물이 없습니다.")
+        send_telegram("🔔 [창원시 부동산 봇] 최근 거래된 물량 중 새로 경신된 신고가가 없습니다.")
 
 if __name__ == "__main__":
     main()
