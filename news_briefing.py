@@ -5,8 +5,8 @@ import urllib.parse
 import xml.etree.ElementTree as ET
 import requests
 
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
-CHAT_ID = os.environ.get("CHAT_ID", "").strip()
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "8777709400:AAGtxOvXX0Hv4zHU7jdkG5ezNQ-BZZ_lCXg").strip()
+CHAT_ID = os.environ.get("CHAT_ID", "8876795894").strip()
 
 # 주제별 검색 키워드 및 가져올 기사 수
 TOPICS = [
