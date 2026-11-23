@@ -10,11 +10,11 @@ CHAT_ID = (os.environ.get("CHAT_ID") or "8876795894").strip()
 
 # 주제별 검색 키워드 및 가져올 기사 수
 TOPICS = [
-    {"title": "🤖 AI · 테크", "query": "인공지능 AI 반도체", "count": 3},
-    {"title": "🏢 부동산", "query": "부동산 아파트 청약 금리", "count": 3},
-    {"title": "📈 경제 · 금융", "query": "한국은행 증시 환율 경제", "count": 3},
-    {"title": "🧠 심리학 · 정신의학", "query": "심리학 정신건강 우울 불안 자살 아동청소년 정신의학 임상심리", "count": 3},
-    {"title": "📰 기타 주요 이슈", "query": "사회 주요뉴스 정책", "count": 2},
+    {"title": "🤖 AI · 테크", "query": "인공지능 AI 반도체", "count": 5},
+    {"title": "🏢 부동산", "query": "부동산 아파트 청약 금리", "count": 5},
+    {"title": "📈 경제 · 금융", "query": "한국은행 증시 환율 경제", "count": 5},
+    {"title": "🧠 심리학 · 정신의학", "query": "심리학 정신건강 우울 불안 자살 아동청소년 정신의학 임상심리", "count": 5},
+    {"title": "📰 기타 주요 이슈", "query": "사회 주요뉴스 정책", "count": 5},
 ]
 
 
