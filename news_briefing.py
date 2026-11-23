@@ -5,8 +5,8 @@ import urllib.parse
 import xml.etree.ElementTree as ET
 import requests
 
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "8777709400:AAGtxOvXX0Hv4zHU7jdkG5ezNQ-BZZ_lCXg").strip()
-CHAT_ID = os.environ.get("CHAT_ID", "8876795894").strip()
+TELEGRAM_BOT_TOKEN = (os.environ.get("TELEGRAM_BOT_TOKEN") or "8777709400:AAGtxOvXX0Hv4zHU7jdkG5ezNQ-BZZ_lCXg").strip()
+CHAT_ID = (os.environ.get("CHAT_ID") or "8876795894").strip()
 
 # 주제별 검색 키워드 및 가져올 기사 수
 TOPICS = [
@@ -35,7 +35,6 @@ def fetch_news(query: str, limit: int = 3) -> list[dict]:
     for item in root.findall("./channel/item")[:limit]:
         raw_title = item.findtext("title", default="")
         link = item.findtext("link", default="")
-        # '기사 제목 - 언론사' 형태 분리
         if " - " in raw_title:
             title_part, press = raw_title.rsplit(" - ", 1)
         else:
