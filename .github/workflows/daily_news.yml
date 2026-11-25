@@ -2,7 +2,7 @@ name: Daily News Briefing
 
 on:
   schedule:
-    # 매일 UTC 23:00 실행 = 한국 시간(KST) 매일 오전 08:00
+    # 매일 UTC 23:33 실행 = 한국 시간(KST) 매일 오전 08:33
     - cron: '0 23 * * *'
   workflow_dispatch:
 
