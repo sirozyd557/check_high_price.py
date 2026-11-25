@@ -2,7 +2,7 @@ name: Daily Apt Price Alert
 
 on:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '43 23 * * *'
   workflow_dispatch: {}
 
 jobs:
