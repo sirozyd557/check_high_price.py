@@ -15,11 +15,11 @@ MAX_DAYS = 7
 
 # 주제별 검색 키워드 및 가져올 기사 수
 TOPICS = [
-    {"title": "🤖 AI · 테크", "query": "인공지능 AI 반도체", "count": 5},
-    {"title": "🏢 부동산", "query": "부동산 아파트(서울, 수도권, 지방) 금리", "count": 5},
-    {"title": "📈 경제 · 금융", "query": "한국은행 증시 환율 경제", "count": 5},
-    {"title": "🧠 심리학 · 정신의학", "query": "심리학 정신건강 우울 불안 자상 아동청소년 임상심리 정신의학", "count": 5},
-    {"title": "📰 기타 주요 이슈", "query": "사회 주요뉴스 정책", "count": 5},
+    {"title": "🤖 AI · 테크", "query": "인공지능 or AI or 생성형 AI or 반도체", "count": 5},
+    {"title": "🏢 부동산", "query": "부동산 or 아파트(서울 or 수도권 or 지방) or 금리", "count": 5},
+    {"title": "📈 경제 · 금융", "query": "한국은행 or 증시 or 환율 or 경제", "count": 5},
+    {"title": "🧠 심리학 · 정신의학", "query": "심리학 or 정신건강 or 우울 or 불안 or 자살 or 아동청소년 or 임상심리 or 정신의학", "count": 5},
+    {"title": "📰 기타 주요 이슈", "query": "사회 or 주요뉴스 or 정책 or 사회이슈", "count": 5},
 ]
 
 
