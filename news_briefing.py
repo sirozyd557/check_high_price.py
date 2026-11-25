@@ -15,12 +15,14 @@ MAX_DAYS = 7
 
 # 주제별 검색 키워드 및 가져올 기사 수
 TOPICS = [
-    {"title": "🤖 AI · 테크", "query": "인공지능 OR AI OR 생성형AI OR 반도체", "count": 5},
-    {"title": "🏢 부동산 (전국·수도권·광역시)", "query": "(서울 OR 수도권 OR 광역시 OR 지방) AND (부동산 OR 아파트)", "count": 5},
-    {"title": "🏗️ 부동산 (창원 · 경남)", "query": "창원 부동산 OR 창원 아파트 OR 창원 재개발", "count": 5},
-    {"title": "📈 경제 · 금융", "query": "한국은행 OR 증시 OR 환율 OR 금리", "count": 5},
-    {"title": "🧠 심리학 · 정신의학", "query": "심리학 OR 정신건강 OR 우울증 OR 임상심리 OR 정신의학", "count": 5},
-    {"title": "📰 기타 주요 이슈", "query": "사회 이슈 OR 주요뉴스 OR 보건복지부", "count": 5},
+    {"title": "🤖 AI · 테크", "query": "인공지능 OR AI OR 생성형AI OR 반도체", "count": 4},
+    {"title": "🏢 부동산 (전국·수도권·광역시)", "query": "(서울 OR 수도권 OR 광역시 OR 지방) AND (부동산 OR 아파트)", "count": 4},
+    {"title": "🏠 부동산 (창원 · 경남)", "query": "창원 부동산 OR 창원 아파트 OR 창원 재개발", "count": 4},
+    {"title": "🏗️ 창원 개발 · 기업·투자 유치", "query": "창원 AND (개발 OR 발전계획 OR 투자유치 OR 기업유치 OR 특구 OR 산단)", "count": 4},
+    {"title": "📈 경제 · 금융", "query": "한국은행 OR 증시 OR 환율 OR 금리", "count": 4},
+    {"title": "🎓 교육 · AI교육 · 입시", "query": "(AI 교육 OR 디지털 교과서 OR 에듀테크 OR 교육부 정책) OR (대입 개편 OR 고교학점제 OR 입시 OR 수능)", "count": 4},
+    {"title": "🧠 심리학 · 정신의학", "query": "심리학 OR 정신건강 OR 우울증 OR 임상심리 OR 정신의학", "count": 4},
+    {"title": "📰 기타 주요 이슈", "query": "사회 이슈 OR 주요뉴스 OR 보건복지부", "count": 4},
 ]
 
 
